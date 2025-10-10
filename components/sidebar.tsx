@@ -19,6 +19,7 @@ import {
   Settings,
   HelpCircle
 } from 'lucide-react'
+import packageJson from '../package.json'
 
 interface SidebarProps {
   user: any
@@ -175,6 +176,9 @@ export function Sidebar({ user }: SidebarProps) {
             </p>
             <p className="text-xs text-gray-500 truncate">
               {isAdmin ? 'Administrator' : 'User'}
+            </p>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              v{packageJson.version}
             </p>
           </div>
         </div>
