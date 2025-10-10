@@ -77,20 +77,26 @@ export function PDFUpload() {
         try {
           // Upload to Supabase Storage
           const fileName = `${Date.now()}-${fileItem.file.name}`
+          
+          // Update progress to show uploading
+          setFiles(prev => prev.map(f => 
+            f.id === fileItem.id 
+              ? { ...f, progress: 50 }
+              : f
+          ))
+          
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('incoming-pdfs')
-            .upload(fileName, fileItem.file, {
-              onUploadProgress: (progress) => {
-                const percent = Math.round((progress.loaded / progress.total) * 100)
-                setFiles(prev => prev.map(f => 
-                  f.id === fileItem.id 
-                    ? { ...f, progress: Math.min(percent, 90) } // Reserve 10% for processing
-                    : f
-                ))
-              }
-            })
+            .upload(fileName, fileItem.file)
           
           if (uploadError) throw uploadError
+          
+          // Update progress after successful upload
+          setFiles(prev => prev.map(f => 
+            f.id === fileItem.id 
+              ? { ...f, progress: 80 }
+              : f
+          ))
           
           // Update status to processing
           setFiles(prev => prev.map(f => 
@@ -164,16 +170,16 @@ export function PDFUpload() {
   
   const getStatusBadge = (status: UploadFile['status']) => {
     const variants = {
-      pending: { variant: 'secondary' as const, text: 'Pending' },
-      uploading: { variant: 'default' as const, text: 'Uploading' },
-      processing: { variant: 'default' as const, text: 'Processing' },
+      pending: { variant: 'secondary' as const, text: 'Pending', className: '' },
+      uploading: { variant: 'default' as const, text: 'Uploading', className: '' },
+      processing: { variant: 'default' as const, text: 'Processing', className: '' },
       completed: { variant: 'default' as const, text: 'Completed', className: 'bg-green-100 text-green-800' },
-      error: { variant: 'destructive' as const, text: 'Error' }
+      error: { variant: 'destructive' as const, text: 'Error', className: '' }
     }
     
     const config = variants[status]
     return (
-      <Badge variant={config.variant} className={config.className}>
+      <Badge variant={config.variant} className={config.className || undefined}>
         {config.text}
       </Badge>
     )

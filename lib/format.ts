@@ -44,11 +44,13 @@ export function formatDate(dateStr: string | null | undefined, format: 'short' |
     const date = new Date(dateStr)
     if (isNaN(date.getTime())) return dateStr // Return original if invalid
     
-    const options: Intl.DateTimeFormatOptions = {
-      short: { year: '2-digit', month: 'numeric', day: 'numeric' },
-      medium: { year: 'numeric', month: 'short', day: 'numeric' },
-      long: { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }
-    }[format]
+    const formatOptions: Record<string, Intl.DateTimeFormatOptions> = {
+      short: { year: '2-digit' as const, month: 'numeric' as const, day: 'numeric' as const },
+      medium: { year: 'numeric' as const, month: 'short' as const, day: 'numeric' as const },
+      long: { year: 'numeric' as const, month: 'long' as const, day: 'numeric' as const, weekday: 'long' as const }
+    }
+    
+    const options = formatOptions[format]
     
     return new Intl.DateTimeFormat('en-CA', options).format(date)
   } catch {

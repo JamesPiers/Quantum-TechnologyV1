@@ -226,7 +226,7 @@ export const AuditEventSchema = z.object({
   entity: z.string().min(1),
   entity_id: DatabaseId.nullable().optional(),
   action: z.string().min(1),
-  payload: z.record(z.any()).nullable().optional(),
+  payload: z.record(z.string(), z.any()).nullable().optional(),
   created_at: z.string().datetime()
 })
 
@@ -234,8 +234,8 @@ export const RawIngestSchema = z.object({
   id: DatabaseId,
   file_path: z.string().min(1),
   uploader_user_id: DatabaseId.nullable().optional(),
-  parsed_content: z.record(z.any()).nullable().optional(),
-  ingest_report: z.record(z.any()).nullable().optional(),
+  parsed_content: z.record(z.string(), z.any()).nullable().optional(),
+  ingest_report: z.record(z.string(), z.any()).nullable().optional(),
   processing_status: z.enum(['pending', 'processing', 'completed', 'failed']).default('pending'),
   error_message: z.string().nullable().optional(),
   created_at: z.string().datetime(),

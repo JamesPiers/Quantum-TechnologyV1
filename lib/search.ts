@@ -9,7 +9,7 @@ import { ServerDB } from './supabase-server'
  * Main search function for parts with pagination and filtering
  */
 export async function searchParts(params: SearchParts): Promise<SearchResults> {
-  const db = new ServerDB()
+  const db = await ServerDB.create()
   
   const { data, error } = await db.getParts({
     po: params.po,
@@ -55,7 +55,7 @@ export async function searchParts(params: SearchParts): Promise<SearchResults> {
  * Get search facets (counts for filters)
  */
 export async function getSearchFacets(baseFilters?: Partial<SearchParts>) {
-  const db = new ServerDB()
+  const db = await ServerDB.create()
   
   // Get unique manufacturers
   const { data: manufacturers } = await db.getManufacturers()
@@ -148,7 +148,7 @@ export async function quickSearch(query: string, limit = 20): Promise<PartReadab
 export async function getSearchSuggestions(field: 'part' | 'po' | 'manufacturer' | 'supplier' | 'project', query: string) {
   if (!query.trim() || query.length < 2) return []
   
-  const db = new ServerDB()
+  const db = await ServerDB.create()
   
   switch (field) {
     case 'manufacturer': {
@@ -269,7 +269,7 @@ export async function advancedSearch(filters: AdvancedSearchFilters): Promise<Se
   
   // For manufacturer/supplier, we'd need to resolve IDs to names
   if (filters.manufacturerId) {
-    const db = new ServerDB()
+    const db = await ServerDB.create()
     const { data: manufacturers } = await db.getManufacturers()
     const manufacturer = manufacturers?.find(m => m.id === filters.manufacturerId)
     if (manufacturer) {
@@ -278,7 +278,7 @@ export async function advancedSearch(filters: AdvancedSearchFilters): Promise<Se
   }
   
   if (filters.supplierId) {
-    const db = new ServerDB()
+    const db = await ServerDB.create()
     const { data: suppliers } = await db.getSuppliers()
     const supplier = suppliers?.find(s => s.id === filters.supplierId)
     if (supplier) {

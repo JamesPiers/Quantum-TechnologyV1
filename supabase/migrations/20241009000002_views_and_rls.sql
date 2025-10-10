@@ -18,7 +18,7 @@ SELECT
     ELSE 'Unknown'
   END as category_name,
   p.part,
-  p.desc as description,
+  p."desc" as description,
   p.vp1 as value_param_1,
   p.up1 as units_1,
   p.vp2 as value_param_2,

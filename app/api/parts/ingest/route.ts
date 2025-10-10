@@ -57,14 +57,15 @@ export async function POST(request: NextRequest) {
         
       } catch (fileError) {
         console.error(`Error processing file ${filePath}:`, fileError)
-        errors.push(`Failed to process ${filePath}: ${fileError.message}`)
+        const errorMessage = fileError instanceof Error ? fileError.message : 'Unknown error'
+        errors.push(`Failed to process ${filePath}: ${errorMessage}`)
         
         reports.push({
           partsInserted: 0,
           partsUpdated: 0,
           posCreated: 0,
           warnings: [],
-          errors: [fileError.message]
+          errors: [errorMessage]
         })
       }
     }
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     
     // Log audit event for the batch
     try {
-      const db = new ServerDB()
+      const db = await ServerDB.create()
       await db.logAuditEvent({
         user_id: user.id,
         entity: 'pdf_batch_ingest',
@@ -108,16 +109,19 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('PDF ingest API error:', error)
     
-    if (error.message?.includes('Authentication required')) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorName = error instanceof Error ? error.name : ''
+    
+    if (errorMessage.includes('Authentication required')) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
     
-    if (error.name === 'ZodError') {
+    if (errorName === 'ZodError') {
       return NextResponse.json(
-        { error: 'Invalid request parameters', details: error.errors },
+        { error: 'Invalid request parameters', details: (error as any).errors },
         { status: 400 }
       )
     }
@@ -125,12 +129,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         error: 'PDF ingest failed', 
-        message: error.message,
+        message: errorMessage,
         partsInserted: 0,
         partsUpdated: 0,
         posCreated: 0,
         warnings: [],
-        errors: [error.message]
+        errors: [errorMessage]
       },
       { status: 500 }
     )
@@ -147,7 +151,7 @@ export async function GET(request: NextRequest) {
     const user = await requireAuth()
     
     // Get recent ingest records for this user
-    const db = new ServerDB()
+    const db = await ServerDB.create()
     const supabase = createServiceRoleClient()
     
     const { data: ingestRecords, error } = await supabase
@@ -168,7 +172,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get ingest status API error:', error)
     
-    if (error.message?.includes('Authentication required')) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    if (errorMessage.includes('Authentication required')) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -176,7 +182,7 @@ export async function GET(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { error: 'Failed to get ingest status', message: error.message },
+      { error: 'Failed to get ingest status', message: errorMessage },
       { status: 500 }
     )
   }

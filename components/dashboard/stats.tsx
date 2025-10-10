@@ -10,7 +10,7 @@ import { formatCurrency, formatNumber } from '@/lib/format'
 
 async function getStats() {
   try {
-    const db = new ServerDB()
+    const db = await ServerDB.create()
     
     // Get basic counts
     const [partsResult, suppliersResult, manufacturersResult, posResult] = await Promise.all([
@@ -20,8 +20,11 @@ async function getStats() {
       db.getPurchaseOrders()
     ])
     
+    // Type assertion for RPC result structure
+    const rpcData = partsResult.data as Array<{ parts_data: any; total_count: number }> | null
+    
     // Calculate totals and trends (simplified for demo)
-    const totalParts = partsResult.data?.[0]?.total_count || 0
+    const totalParts = rpcData?.[0]?.total_count || 0
     const totalSuppliers = suppliersResult.data?.length || 0
     const totalManufacturers = manufacturersResult.data?.length || 0
     const totalPOs = posResult.data?.length || 0

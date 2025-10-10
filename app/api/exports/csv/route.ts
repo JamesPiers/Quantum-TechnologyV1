@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     // Log audit event
     try {
       const { ServerDB } = await import('@/lib/supabase-server')
-      const db = new ServerDB()
+      const db = await ServerDB.create()
       await db.logAuditEvent({
         user_id: user.id,
         entity: 'parts_export',
@@ -78,22 +78,25 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('CSV export API error:', error)
     
-    if (error.message?.includes('Authentication required')) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorName = error instanceof Error ? error.name : ''
+    
+    if (errorMessage.includes('Authentication required')) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
     
-    if (error.name === 'ZodError') {
+    if (errorName === 'ZodError') {
       return NextResponse.json(
-        { error: 'Invalid export parameters', details: error.errors },
+        { error: 'Invalid export parameters', details: (error as any).errors },
         { status: 400 }
       )
     }
     
     return NextResponse.json(
-      { error: 'CSV export failed', message: error.message },
+      { error: 'CSV export failed', message: errorMessage },
       { status: 500 }
     )
   }
@@ -124,7 +127,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('CSV template API error:', error)
     
-    if (error.message?.includes('Authentication required')) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    if (errorMessage.includes('Authentication required')) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -132,7 +137,7 @@ export async function POST(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { error: 'CSV template generation failed', message: error.message },
+      { error: 'CSV template generation failed', message: errorMessage },
       { status: 500 }
     )
   }

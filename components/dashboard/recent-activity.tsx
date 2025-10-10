@@ -18,7 +18,7 @@ import Link from 'next/link'
 
 async function getRecentActivity() {
   try {
-    const db = new ServerDB()
+    const db = await ServerDB.create()
     
     // Get recent parts (last 20)
     const partsResult = await db.getParts({ 
@@ -26,8 +26,11 @@ async function getRecentActivity() {
       offset: 0 
     })
     
-    const recentParts = partsResult.data?.[0]?.parts_data 
-      ? JSON.parse(JSON.stringify(partsResult.data[0].parts_data)).slice(0, 10)
+    // Type assertion for RPC result structure
+    const rpcData = partsResult.data as Array<{ parts_data: any; total_count: number }> | null
+    
+    const recentParts = rpcData?.[0]?.parts_data 
+      ? JSON.parse(JSON.stringify(rpcData[0].parts_data)).slice(0, 10)
       : []
     
     // Transform to activity items

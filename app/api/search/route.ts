@@ -40,22 +40,25 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Search API error:', error)
     
-    if (error.message?.includes('Authentication required')) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorName = error instanceof Error ? error.name : ''
+    
+    if (errorMessage.includes('Authentication required')) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
     
-    if (error.name === 'ZodError') {
+    if (errorName === 'ZodError') {
       return NextResponse.json(
-        { error: 'Invalid search parameters', details: error.errors },
+        { error: 'Invalid search parameters', details: (error as any).errors },
         { status: 400 }
       )
     }
     
     return NextResponse.json(
-      { error: 'Search failed', message: error.message },
+      { error: 'Search failed', message: errorMessage },
       { status: 500 }
     )
   }
@@ -87,7 +90,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Search facets API error:', error)
     
-    if (error.message?.includes('Authentication required')) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    if (errorMessage.includes('Authentication required')) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -95,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { error: 'Failed to get search facets', message: error.message },
+      { error: 'Failed to get search facets', message: errorMessage },
       { status: 500 }
     )
   }

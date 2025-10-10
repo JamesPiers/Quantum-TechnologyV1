@@ -6,8 +6,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Database } from './db'
 
-export function createClient() {
-  const cookieStore = cookies()
+export async function createClient() {
+  const cookieStore = await cookies()
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,7 +44,7 @@ export function createClient() {
  * Server-side user authentication utilities
  */
 export async function getUser() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   
   if (error) {
@@ -89,10 +89,15 @@ export async function requireAdmin() {
  * Server-side database operations with proper auth context
  */
 export class ServerDB {
-  private supabase
+  private supabase: Awaited<ReturnType<typeof createClient>>
 
-  constructor() {
-    this.supabase = createClient()
+  private constructor(supabase: Awaited<ReturnType<typeof createClient>>) {
+    this.supabase = supabase
+  }
+
+  static async create() {
+    const supabase = await createClient()
+    return new ServerDB(supabase)
   }
 
   async getParts(filters?: {

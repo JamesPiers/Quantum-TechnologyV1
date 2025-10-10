@@ -4,14 +4,6 @@
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Helper function for auth.role() compatibility
-CREATE OR REPLACE FUNCTION auth.role() RETURNS text AS $$
-  SELECT COALESCE(
-    nullif(current_setting('request.jwt.claim.role', true), ''),
-    (CASE WHEN auth.uid() IS NULL THEN 'anon' ELSE 'authenticated' END)
-  );
-$$ LANGUAGE sql STABLE;
-
 -- Core dictionary tables
 -- 1.1 Manufacturers
 CREATE TABLE manufacturers (
@@ -78,7 +70,7 @@ CREATE TABLE parts (
   -- Core identification
   c char(1) NOT NULL CHECK (c IN ('m', 'e', 't', 's', 'p', 'c', 'v', 'x')), -- Category: m(material), e(electrical), t(electronics), s(systems), p(plumbing), c(compressors), v(vacuum), x(misc/other)
   part text NOT NULL,                       -- Primary short name / code (PART column in source)
-  desc text,                                -- More detailed description (DESC column in source)
+  "desc" text,                              -- More detailed description (DESC column in source)
   
   -- Value parameters
   vp1 numeric,                              -- Value parameter 1 (VP1 column in source)

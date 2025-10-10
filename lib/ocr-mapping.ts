@@ -267,7 +267,7 @@ function inferCategory(text: string): Category {
 /**
  * Extract first match from multiple patterns
  */
-function extractFirstMatch(text: string, patterns: RegExp[]): string | undefined {
+function extractFirstMatch(text: string, patterns: readonly RegExp[]): string | undefined {
   for (const pattern of patterns) {
     const match = pattern.exec(text)
     if (match && match[1]) {
@@ -282,7 +282,7 @@ function extractFirstMatch(text: string, patterns: RegExp[]): string | undefined
 /**
  * Extract all matches from multiple patterns
  */
-function extractAllMatches(text: string, patterns: RegExp[]): string[] {
+function extractAllMatches(text: string, patterns: readonly RegExp[]): string[] {
   const matches: string[] = []
   
   for (const pattern of patterns) {
