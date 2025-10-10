@@ -92,14 +92,14 @@ export function PartsFilters() {
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
           <Select 
-            value={filters.category} 
-            onValueChange={(value) => handleFilterChange('category', value)}
+            value={filters.category || undefined} 
+            onValueChange={(value) => handleFilterChange('category', value === 'all' ? '' : value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All categories</SelectItem>
+              <SelectItem value="all">All categories</SelectItem>
               {Object.entries(CategoryLabels).map(([code, label]) => (
                 <SelectItem key={code} value={code}>
                   {label}
@@ -113,14 +113,14 @@ export function PartsFilters() {
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
           <Select 
-            value={filters.status} 
-            onValueChange={(value) => handleFilterChange('status', value)}
+            value={filters.status || undefined} 
+            onValueChange={(value) => handleFilterChange('status', value === 'all' ? '' : value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="0">Unknown</SelectItem>
               <SelectItem value="1">Quoted</SelectItem>
               <SelectItem value="2">Ordered</SelectItem>
