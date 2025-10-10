@@ -2,6 +2,10 @@
  * Layout for authenticated application pages
  */
 
+// Force dynamic rendering since we use cookies for authentication
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'

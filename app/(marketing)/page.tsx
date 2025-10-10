@@ -3,6 +3,7 @@
  */
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowRight, Database, Search, Upload, FileText, Shield, Zap } from 'lucide-react'
@@ -14,12 +15,14 @@ export default function HomePage() {
       <header className="border-b bg-white/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded bg-blue-600 flex items-center justify-center">
-                <Database className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">Quantum Technology</span>
-            </div>
+            <Image
+              src="/Quantum-Logo-Blue.png"
+              alt="Quantum Technology Logo"
+              width={200}
+              height={50}
+              className="object-contain"
+              priority
+            />
             <Link href="/dashboard">
               <Button>
                 Go to Dashboard
@@ -197,12 +200,13 @@ export default function HomePage() {
       <footer className="py-8 bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="h-6 w-6 rounded bg-blue-600 flex items-center justify-center">
-                <Database className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-white font-semibold">Quantum Technology</span>
-            </div>
+            <Image
+              src="/Quantum-Logo-Blue.png"
+              alt="Quantum Technology Logo"
+              width={150}
+              height={40}
+              className="object-contain brightness-0 invert"
+            />
             <p className="text-gray-400 text-sm">
               © 2024 Quantum Technology. All rights reserved.
             </p>

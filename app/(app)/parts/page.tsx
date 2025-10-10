@@ -2,6 +2,10 @@
  * Parts management page with search, filtering, and data table
  */
 
+// Force dynamic rendering since we use cookies for authentication
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { Suspense } from 'react'
 import { PartsTable } from '@/components/parts/parts-table'
 import { PartsFilters } from '@/components/parts/parts-filters'

@@ -16,6 +16,16 @@ export const metadata: Metadata = {
   title: "Quantum Technology - Parts & Supplier Management",
   description: "Comprehensive parts and supplier management system with PDF processing, advanced search, and reporting capabilities.",
   keywords: ["parts management", "supplier management", "purchase orders", "inventory", "quantum technology"],
+  icons: {
+    icon: [
+      {
+        url: '/favicon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

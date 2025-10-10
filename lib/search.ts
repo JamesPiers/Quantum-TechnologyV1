@@ -54,7 +54,7 @@ export async function searchParts(params: SearchParts): Promise<SearchResults> {
 /**
  * Get search facets (counts for filters)
  */
-export async function getSearchFacets(baseFilters?: Partial<SearchParts>) {
+export async function getSearchFacets(_baseFilters?: Partial<SearchParts>) {
   const db = await ServerDB.create()
   
   // Get unique manufacturers

@@ -13,7 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { searchParts } from '@/lib/search'
-import { formatCurrency, formatCategory, formatStatus } from '@/lib/format'
+import { formatCurrency } from '@/lib/format'
 import { SearchPartsSchema } from '@/lib/schemas'
 import { Eye, Edit } from 'lucide-react'
 import Link from 'next/link'
@@ -32,7 +32,7 @@ export async function PartsTable({ searchParams }: PartsTableProps) {
     supplier: typeof searchParams.supplier === 'string' ? searchParams.supplier : undefined,
     status: typeof searchParams.status === 'string' ? parseInt(searchParams.status) : undefined,
     project: typeof searchParams.project === 'string' ? searchParams.project : undefined,
-    category: typeof searchParams.category === 'string' ? searchParams.category as any : undefined,
+    category: typeof searchParams.category === 'string' ? searchParams.category : undefined,
     limit: 50,
     offset: 0
   }

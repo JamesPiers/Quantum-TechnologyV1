@@ -5,12 +5,11 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Database, 
   Home, 
   Package, 
   Users, 
@@ -91,13 +90,14 @@ export function Sidebar({ user }: SidebarProps) {
     <div className="flex h-full w-64 flex-col bg-white border-r border-gray-200">
       {/* Logo and Brand */}
       <div className="flex h-16 items-center gap-2 px-6 border-b border-gray-200">
-        <div className="h-8 w-8 rounded bg-blue-600 flex items-center justify-center">
-          <Database className="h-5 w-5 text-white" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-lg font-semibold text-gray-900">Quantum</span>
-          <span className="text-xs text-gray-500">Technology</span>
-        </div>
+        <Image
+          src="/Quantum-Logo-Blue.png"
+          alt="Quantum Technology Logo"
+          width={150}
+          height={40}
+          className="object-contain"
+          priority
+        />
         {isAdmin && (
           <Badge variant="secondary" className="ml-auto text-xs">
             Admin

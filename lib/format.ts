@@ -10,7 +10,6 @@ import { Category, Currency, CategoryLabels, CurrencyLabels, LocationCodes } fro
 export function formatCurrency(amount: number | null | undefined, currency: Currency = 'C'): string {
   if (amount === null || amount === undefined) return ''
   
-  const symbol = currency === 'C' ? '$' : '$'
   const locale = currency === 'C' ? 'en-CA' : 'en-US'
   const currencyCode = currency === 'C' ? 'CAD' : 'USD'
   
