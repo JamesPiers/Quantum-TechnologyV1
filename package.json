@@ -1,6 +1,6 @@
 {
   "name": "quantum-instructions",
-  "version": "1.1.18",
+  "version": "1.1.20",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -11,7 +11,15 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "migrate:mysql": "tsx scripts/mysql_to_supabase.ts",
+    "test:mysql": "tsx scripts/test-mysql-connection.ts",
+    "migrate:quantum-parts": "tsx scripts/migrate-quantum-parts-data.ts",
+    "import:quantum-parts": "tsx scripts/import-quantum-parts.ts",
+    "import:quantum-parts:dry-run": "tsx scripts/import-quantum-parts.ts --dry-run",
+    "import:quantum-parts:test": "tsx scripts/import-quantum-parts.ts --limit=100",
+    "verify:import": "tsx scripts/verify-import.ts",
+    "clear:test-data": "tsx scripts/clear-test-data.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -27,7 +35,9 @@
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^16.6.1",
     "lucide-react": "^0.545.0",
+    "mysql2": "^3.15.2",
     "next": "15.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -53,6 +63,7 @@
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5",
     "vitest": "^3.2.4"
