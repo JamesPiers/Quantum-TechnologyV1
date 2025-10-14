@@ -261,10 +261,10 @@ export function ResizablePartsTable({ parts }: ResizablePartsTableProps) {
                 <div className="flex items-center justify-between">
                   <span>{column.label}</span>
                   <div
-                    className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 active:bg-blue-600"
+                    className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors"
                     onMouseDown={(e) => handleMouseDown(e, column.key)}
                     style={{ 
-                      backgroundColor: resizingColumn === column.key ? '#3b82f6' : 'transparent'
+                      backgroundColor: resizingColumn === column.key ? '#3b82f6' : '#d1d5db'
                     }}
                   />
                 </div>
