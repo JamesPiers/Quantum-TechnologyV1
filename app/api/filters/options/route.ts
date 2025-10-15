@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       case 'purchase_order':
       case 'location_code':
       case 'last_updated_by': {
-        // Use direct SQL query for DISTINCT values from view
+        // Map API field names to database column names
         const fieldMap: Record<string, string> = {
           'responsible_person': 'responsible_person',
           'project': 'project',
@@ -84,20 +84,31 @@ export async function GET(request: NextRequest) {
         const supabase = await import('@/lib/supabase-server').then(m => m.createClient())
         const client = await supabase
         
+        console.log(`[Filter Options API] Getting DISTINCT values for: ${dbField}`)
+        
+        // Use rpc to execute raw SQL for true DISTINCT query
         const { data: distinctValues, error } = await client
-          .from('v_parts_readable')
-          .select(dbField)
-          .not(dbField, 'is', null)
-          .order(dbField)
+          .rpc('get_distinct_field_values', {
+            table_name: 'v_parts_readable',
+            field_name: dbField
+          })
         
         if (error) {
-          console.error(`[Filter Options API] Error fetching distinct ${field}:`, error)
-          throw new Error(`Failed to fetch ${field}: ${error.message}`)
-        }
-        
-        if (distinctValues) {
+          console.error(`[Filter Options API] RPC error for ${field}:`, error)
+          // Fallback to regular query if RPC doesn't exist
+          const { data: fallbackData, error: fallbackError } = await client
+            .from('v_parts_readable')
+            .select(dbField)
+            .not(dbField, 'is', null)
+          
+          if (fallbackError) {
+            console.error(`[Filter Options API] Fallback error for ${field}:`, fallbackError)
+            throw new Error(`Failed to fetch ${field}: ${fallbackError.message}`)
+          }
+          
+          // Extract unique values manually
           const uniqueValues = new Set<string>()
-          distinctValues.forEach((row: any) => {
+          fallbackData?.forEach((row: any) => {
             const value = row[dbField]
             if (value && typeof value === 'string' && value.trim()) {
               uniqueValues.add(value.trim())
@@ -110,7 +121,19 @@ export async function GET(request: NextRequest) {
               value,
               label: value
             }))
+        } else {
+          // RPC returns array of distinct values directly
+          options = (distinctValues || [])
+            .filter((value: any) => value && typeof value === 'string' && value.trim())
+            .map((value: string) => value.trim())
+            .sort()
+            .map(value => ({
+              value,
+              label: value
+            }))
         }
+        
+        console.log(`[Filter Options API] Returning ${options.length} options for ${field}:`, options.slice(0, 5))
         break
       }
       
