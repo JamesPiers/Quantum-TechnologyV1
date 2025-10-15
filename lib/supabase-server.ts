@@ -298,4 +298,24 @@ export class ServerDB {
       .select()
       .single()
   }
+
+  async getPartPriceHistory(partId: string) {
+    return await this.supabase
+      .rpc('rpc_get_part_price_history', { part_id_param: partId })
+  }
+
+  async getPartPurchaseOrders(partId: string) {
+    return await this.supabase
+      .rpc('rpc_get_part_purchase_orders', { part_id_param: partId })
+  }
+
+  async getPartAuditLog(partId: string) {
+    return await this.supabase
+      .rpc('rpc_get_part_audit_log', { part_id_param: partId })
+  }
+
+  async getRelatedParts(partCode: string) {
+    return await this.supabase
+      .rpc('rpc_get_related_parts', { part_code_param: partCode })
+  }
 }
