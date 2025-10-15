@@ -7,6 +7,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/supabase-server'
 import { ServerDB } from '@/lib/supabase-server'
 
+// Cache filter options for 5 minutes to improve load times
+export const revalidate = 300
+
 export async function GET(request: NextRequest) {
   try {
     // Require authentication
@@ -144,14 +147,20 @@ export async function GET(request: NextRequest) {
               label: value
             }))
         } else {
-          // RPC returns array of distinct values directly
+          // RPC returns array of objects with 'value' property: [{ value: 'James' }, { value: 'Sam' }]
           options = (distinctValues || [])
-            .filter((value: any) => value && typeof value === 'string' && value.trim())
-            .map((value: string) => value.trim())
+            .filter((row: any) => {
+              if (!row.value || typeof row.value !== 'string') return false
+              const trimmed = row.value.trim()
+              // Filter out invalid values: empty, just whitespace, question marks, or single digits
+              if (!trimmed || trimmed === '?' || trimmed === '0' || /^\d+$/.test(trimmed)) return false
+              return true
+            })
+            .map((row: any) => row.value.trim())
             .sort()
-            .map((value: string) => ({
-              value,
-              label: value
+            .map((val: string) => ({
+              value: val,
+              label: val
             }))
         }
         
