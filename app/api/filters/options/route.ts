@@ -63,10 +63,16 @@ export async function GET(request: NextRequest) {
     
     console.log(`[Filter Options API] Processing ${parts.length} parts for field: ${field}`)
     
+    // Debug: Show a sample part to see structure
+    if (parts.length > 0) {
+      console.log(`[Filter Options API] Sample part structure:`, Object.keys(parts[0]))
+      console.log(`[Filter Options API] Sample ${field} value:`, parts[0][field === 'supplier' ? 'supplier_name' : field === 'manufacturer' ? 'manufacturer_name' : field])
+    }
+    
     // Extract unique values based on the field
     const uniqueValues = new Set<string>()
     
-    parts.forEach((part: any) => {
+    parts.forEach((part: any, index: number) => {
       let value = ''
       
       switch (field) {
@@ -104,6 +110,11 @@ export async function GET(request: NextRequest) {
       
       if (value && value.trim()) {
         uniqueValues.add(value.trim())
+      }
+      
+      // Debug first 3 parts for the requested field
+      if (index < 3) {
+        console.log(`[Filter Options API] Part ${index} ${field} value:`, value || '(empty)')
       }
     })
     
