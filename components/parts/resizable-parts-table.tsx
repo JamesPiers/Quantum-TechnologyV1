@@ -1,11 +1,12 @@
 /**
- * Resizable parts table with user-adjustable column widths
+ * Resizable parts table with user-adjustable column widths and sortable headers
  * Persists column width preferences to localStorage
  */
 
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { 
   Table,
   TableBody,
@@ -18,7 +19,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/format'
 import { PartReadable } from '@/lib/schemas'
-import { Eye, Edit } from 'lucide-react'
+import { Eye, Edit, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { SORT_FIELDS } from '@/lib/filter-config'
 import Link from 'next/link'
 
 interface ResizablePartsTableProps {
@@ -30,32 +32,36 @@ interface ColumnConfig {
   label: string
   defaultWidth: number
   minWidth: number
+  sortable?: boolean
 }
 
 const COLUMNS: ColumnConfig[] = [
-  { key: 'part', label: 'Part Code', defaultWidth: 150, minWidth: 100 },
-  { key: 'description', label: 'Description', defaultWidth: 300, minWidth: 150 },
-  { key: 'category', label: 'Category', defaultWidth: 120, minWidth: 100 },
-  { key: 'supplier', label: 'Supplier', defaultWidth: 150, minWidth: 100 },
-  { key: 'manufacturer', label: 'Manufacturer', defaultWidth: 150, minWidth: 100 },
-  { key: 'mpn', label: 'MPN', defaultWidth: 150, minWidth: 100 },
-  { key: 'dwg', label: 'DWG', defaultWidth: 120, minWidth: 80 },
-  { key: 'dwg_id', label: 'DWG ID', defaultWidth: 100, minWidth: 80 },
-  { key: 'proj', label: 'Project', defaultWidth: 100, minWidth: 80 },
-  { key: 'sec', label: 'Section', defaultWidth: 100, minWidth: 80 },
-  { key: 'po', label: 'PO', defaultWidth: 120, minWidth: 80 },
-  { key: 'resp', label: 'Resp.', defaultWidth: 80, minWidth: 60 },
-  { key: 'quantity', label: 'Quantity', defaultWidth: 100, minWidth: 80 },
-  { key: 'unit_price', label: 'Unit Price', defaultWidth: 120, minWidth: 100 },
-  { key: 'currency', label: 'Currency', defaultWidth: 90, minWidth: 70 },
-  { key: 'order_date', label: 'Order Date', defaultWidth: 120, minWidth: 100 },
-  { key: 'status', label: 'Status', defaultWidth: 120, minWidth: 100 },
-  { key: 'actions', label: 'Actions', defaultWidth: 100, minWidth: 100 },
+  { key: 'part', label: 'Part Code', defaultWidth: 150, minWidth: 100, sortable: true },
+  { key: 'description', label: 'Description', defaultWidth: 300, minWidth: 150, sortable: true },
+  { key: 'category', label: 'Category', defaultWidth: 120, minWidth: 100, sortable: true },
+  { key: 'supplier', label: 'Supplier', defaultWidth: 150, minWidth: 100, sortable: true },
+  { key: 'manufacturer', label: 'Manufacturer', defaultWidth: 150, minWidth: 100, sortable: true },
+  { key: 'mpn', label: 'MPN', defaultWidth: 150, minWidth: 100, sortable: true },
+  { key: 'dwg', label: 'DWG', defaultWidth: 120, minWidth: 80, sortable: true },
+  { key: 'dwg_id', label: 'DWG ID', defaultWidth: 100, minWidth: 80, sortable: true },
+  { key: 'proj', label: 'Project', defaultWidth: 100, minWidth: 80, sortable: true },
+  { key: 'sec', label: 'Section', defaultWidth: 100, minWidth: 80, sortable: true },
+  { key: 'po', label: 'PO', defaultWidth: 120, minWidth: 80, sortable: true },
+  { key: 'resp', label: 'Resp.', defaultWidth: 80, minWidth: 60, sortable: true },
+  { key: 'quantity', label: 'Quantity', defaultWidth: 100, minWidth: 80, sortable: true },
+  { key: 'unit_price', label: 'Unit Price', defaultWidth: 120, minWidth: 100, sortable: true },
+  { key: 'currency', label: 'Currency', defaultWidth: 90, minWidth: 70, sortable: true },
+  { key: 'order_date', label: 'Order Date', defaultWidth: 120, minWidth: 100, sortable: true },
+  { key: 'status', label: 'Status', defaultWidth: 120, minWidth: 100, sortable: true },
+  { key: 'actions', label: 'Actions', defaultWidth: 100, minWidth: 100, sortable: false },
 ]
 
 const STORAGE_KEY = 'parts-table-column-widths'
 
 export function ResizablePartsTable({ parts }: ResizablePartsTableProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
     // Initialize with default widths
     const defaults: Record<string, number> = {}
@@ -69,6 +75,10 @@ export function ResizablePartsTable({ parts }: ResizablePartsTableProps) {
   const [resizingColumn, setResizingColumn] = useState<string | null>(null)
   const startXRef = useRef<number>(0)
   const startWidthRef = useRef<number>(0)
+  
+  // Get current sort state from URL parameters
+  const currentSort = searchParams.get('sort')
+  const currentOrder = searchParams.get('order') as 'asc' | 'desc'
 
   // Load saved column widths from localStorage
   useEffect(() => {
@@ -90,6 +100,78 @@ export function ResizablePartsTable({ parts }: ResizablePartsTableProps) {
     } catch (error) {
       console.error('Error saving column widths:', error)
     }
+  }
+  
+  // Handle column sorting
+  const handleSort = (columnKey: string) => {
+    const column = COLUMNS.find(col => col.key === columnKey)
+    if (!column?.sortable) return
+    
+    // Map column keys to sortable field names
+    const sortFieldMap: Record<string, string> = {
+      'part': 'part',
+      'description': 'description',
+      'category': 'category_name',
+      'supplier': 'supplier_name',
+      'manufacturer': 'manufacturer_name',
+      'mpn': 'part_number',
+      'proj': 'project',
+      'po': 'purchase_order',
+      'quantity': 'quantity',
+      'unit_price': 'unit_price',
+      'order_date': 'order_date',
+      'status': 'status_label'
+    }
+    
+    const sortField = sortFieldMap[columnKey] || columnKey
+    
+    // Determine new sort order
+    let newOrder: 'asc' | 'desc' = 'asc'
+    if (currentSort === sortField) {
+      newOrder = currentOrder === 'asc' ? 'desc' : 'asc'
+    } else {
+      // Use default order from SORT_FIELDS if available
+      const sortConfig = SORT_FIELDS[sortField]
+      newOrder = sortConfig?.defaultOrder || 'asc'
+    }
+    
+    // Update URL with sort parameters
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('sort', sortField)
+    params.set('order', newOrder)
+    
+    router.push(`/parts?${params.toString()}`)
+  }
+  
+  // Get sort icon for column
+  const getSortIcon = (columnKey: string) => {
+    const column = COLUMNS.find(col => col.key === columnKey)
+    if (!column?.sortable) return null
+    
+    const sortFieldMap: Record<string, string> = {
+      'part': 'part',
+      'description': 'description',
+      'category': 'category_name',
+      'supplier': 'supplier_name',
+      'manufacturer': 'manufacturer_name',
+      'mpn': 'part_number',
+      'proj': 'project',
+      'po': 'purchase_order',
+      'quantity': 'quantity',
+      'unit_price': 'unit_price',
+      'order_date': 'order_date',
+      'status': 'status_label'
+    }
+    
+    const sortField = sortFieldMap[columnKey] || columnKey
+    
+    if (currentSort === sortField) {
+      return currentOrder === 'asc' ? 
+        <ArrowUp className="h-4 w-4" /> : 
+        <ArrowDown className="h-4 w-4" />
+    }
+    
+    return <ArrowUpDown className="h-4 w-4 opacity-50" />
   }
 
   const handleMouseDown = (e: React.MouseEvent, columnKey: string) => {
@@ -259,7 +341,15 @@ export function ResizablePartsTable({ parts }: ResizablePartsTableProps) {
                 className="select-none"
               >
                 <div className="flex items-center justify-between">
-                  <span>{column.label}</span>
+                  <div 
+                    className={`flex items-center gap-2 ${
+                      column.sortable ? 'cursor-pointer hover:text-blue-600' : ''
+                    }`}
+                    onClick={() => column.sortable && handleSort(column.key)}
+                  >
+                    <span>{column.label}</span>
+                    {column.sortable && getSortIcon(column.key)}
+                  </div>
                   <div
                     className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors"
                     onMouseDown={(e) => handleMouseDown(e, column.key)}

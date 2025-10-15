@@ -6,9 +6,9 @@ import { SearchParts, SearchResults, PartReadable } from './schemas'
 import { ServerDB } from './supabase-server'
 
 /**
- * Main search function for parts with pagination and filtering
+ * Main search function for parts with pagination, filtering, and sorting
  */
-export async function searchParts(params: SearchParts): Promise<SearchResults> {
+export async function searchParts(params: SearchParts & { sort?: string; order?: 'asc' | 'desc' }): Promise<SearchResults> {
   const db = await ServerDB.create()
   
   const { data, error } = await db.getParts({
@@ -21,7 +21,9 @@ export async function searchParts(params: SearchParts): Promise<SearchResults> {
     project: params.project,
     category: params.category,
     limit: params.limit,
-    offset: params.offset
+    offset: params.offset,
+    sort: params.sort,
+    order: params.order
   })
   
   if (error) {
@@ -39,11 +41,35 @@ export async function searchParts(params: SearchParts): Promise<SearchResults> {
   }
   
   const result = data[0]
-  const parts = result.parts_data ? JSON.parse(JSON.stringify(result.parts_data)) : []
+  let parts = result.parts_data ? JSON.parse(JSON.stringify(result.parts_data)) as PartReadable[] : []
   const totalCount = result.total_count || 0
   
+  // Client-side sorting if not handled by database
+  if (params.sort && params.order && parts.length > 0) {
+    parts.sort((a, b) => {
+      const sortField = params.sort!
+      let aValue = (a as any)[sortField]
+      let bValue = (b as any)[sortField]
+      
+      // Handle null/undefined values
+      if (aValue == null && bValue == null) return 0
+      if (aValue == null) return params.order === 'asc' ? 1 : -1
+      if (bValue == null) return params.order === 'asc' ? -1 : 1
+      
+      // Convert to comparable types
+      if (typeof aValue === 'string') aValue = aValue.toLowerCase()
+      if (typeof bValue === 'string') bValue = bValue.toLowerCase()
+      
+      if (params.order === 'desc') {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+      } else {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+      }
+    })
+  }
+  
   return {
-    parts: parts as PartReadable[],
+    parts,
     total_count: totalCount,
     page: Math.floor(params.offset / params.limit) + 1,
     limit: params.limit,
@@ -210,11 +236,18 @@ export async function getSearchSuggestions(field: 'part' | 'po' | 'manufacturer'
  */
 export interface AdvancedSearchFilters {
   // Text filters
+  search?: string
   partCode?: string
   partNumber?: string
   description?: string
   purchaseOrder?: string
   project?: string
+  section?: string
+  drawing?: string
+  drawingId?: string
+  responsiblePerson?: string
+  notes?: string
+  lastUpdatedBy?: string
   
   // Dropdown filters
   category?: string
@@ -222,14 +255,22 @@ export interface AdvancedSearchFilters {
   manufacturerId?: string
   supplierId?: string
   customerId?: string
+  currency?: string
+  locationCode?: string
   
   // Range filters
   quantityMin?: number
   quantityMax?: number
+  spareQuantityMin?: number
+  spareQuantityMax?: number
   priceMin?: number
   priceMax?: number
   leadTimeMin?: number
   leadTimeMax?: number
+  valueParam1Min?: number
+  valueParam1Max?: number
+  valueParam2Min?: number
+  valueParam2Max?: number
   
   // Date filters
   orderDateFrom?: string
@@ -239,32 +280,30 @@ export interface AdvancedSearchFilters {
   
   // Boolean filters
   budgetItemsOnly?: boolean
-  sparesIncluded?: boolean
-  
-  // Location filter
-  location?: string
+  hasSpares?: boolean
   
   // Pagination
   page?: number
   limit?: number
+  offset?: number
   
   // Sorting
-  sortBy?: 'part' | 'updated_at' | 'order_date' | 'unit_price' | 'quantity'
+  sortBy?: string
   sortOrder?: 'asc' | 'desc'
 }
 
 export async function advancedSearch(filters: AdvancedSearchFilters): Promise<SearchResults> {
-  // Convert advanced filters to basic search params
-  // This is a simplified version - you'd want to extend the RPC function for more advanced filtering
-  
-  const searchParams: SearchParts = {
-    part: filters.partCode || filters.partNumber || filters.description,
+  // Convert advanced filters to basic search params with sorting
+  const searchParams: SearchParts & { sort?: string; order?: 'asc' | 'desc' } = {
+    part: filters.search || filters.partCode || filters.partNumber || filters.description,
     po: filters.purchaseOrder,
     project: filters.project,
     category: filters.category as any,
     status: filters.status,
     limit: filters.limit || 50,
-    offset: ((filters.page || 1) - 1) * (filters.limit || 50)
+    offset: filters.offset || ((filters.page || 1) - 1) * (filters.limit || 50),
+    sort: filters.sortBy,
+    order: filters.sortOrder
   }
   
   // For manufacturer/supplier, we'd need to resolve IDs to names
@@ -286,7 +325,173 @@ export async function advancedSearch(filters: AdvancedSearchFilters): Promise<Se
     }
   }
   
-  return await searchParts(searchParams)
+  // Get basic results first
+  let results = await searchParts(searchParams)
+  
+  // Apply additional client-side filtering for advanced filters not supported by the backend
+  if (results.parts.length > 0) {
+    let filteredParts = results.parts
+    
+    // Text filters
+    if (filters.section) {
+      filteredParts = filteredParts.filter(part => 
+        part.section?.toLowerCase().includes(filters.section!.toLowerCase())
+      )
+    }
+    
+    if (filters.drawing) {
+      filteredParts = filteredParts.filter(part => 
+        part.drawing?.toLowerCase().includes(filters.drawing!.toLowerCase())
+      )
+    }
+    
+    if (filters.drawingId) {
+      filteredParts = filteredParts.filter(part => 
+        part.drawing_id?.toLowerCase().includes(filters.drawingId!.toLowerCase())
+      )
+    }
+    
+    if (filters.responsiblePerson) {
+      filteredParts = filteredParts.filter(part => 
+        part.responsible_person?.toLowerCase().includes(filters.responsiblePerson!.toLowerCase())
+      )
+    }
+    
+    if (filters.notes) {
+      filteredParts = filteredParts.filter(part => 
+        part.notes?.toLowerCase().includes(filters.notes!.toLowerCase())
+      )
+    }
+    
+    if (filters.lastUpdatedBy) {
+      filteredParts = filteredParts.filter(part => 
+        part.last_updated_by?.toLowerCase().includes(filters.lastUpdatedBy!.toLowerCase())
+      )
+    }
+    
+    // Currency filter
+    if (filters.currency) {
+      filteredParts = filteredParts.filter(part => part.currency_code === filters.currency)
+    }
+    
+    // Location filter
+    if (filters.locationCode) {
+      filteredParts = filteredParts.filter(part => part.location_code === filters.locationCode)
+    }
+    
+    // Range filters
+    if (filters.quantityMin !== undefined) {
+      filteredParts = filteredParts.filter(part => part.quantity >= filters.quantityMin!)
+    }
+    
+    if (filters.quantityMax !== undefined) {
+      filteredParts = filteredParts.filter(part => part.quantity <= filters.quantityMax!)
+    }
+    
+    if (filters.spareQuantityMin !== undefined) {
+      filteredParts = filteredParts.filter(part => part.spare_quantity >= filters.spareQuantityMin!)
+    }
+    
+    if (filters.spareQuantityMax !== undefined) {
+      filteredParts = filteredParts.filter(part => part.spare_quantity <= filters.spareQuantityMax!)
+    }
+    
+    if (filters.priceMin !== undefined) {
+      filteredParts = filteredParts.filter(part => 
+        part.unit_price !== null && part.unit_price >= filters.priceMin!
+      )
+    }
+    
+    if (filters.priceMax !== undefined) {
+      filteredParts = filteredParts.filter(part => 
+        part.unit_price !== null && part.unit_price <= filters.priceMax!
+      )
+    }
+    
+    if (filters.leadTimeMin !== undefined) {
+      filteredParts = filteredParts.filter(part => 
+        part.lead_time_weeks !== null && part.lead_time_weeks >= filters.leadTimeMin!
+      )
+    }
+    
+    if (filters.leadTimeMax !== undefined) {
+      filteredParts = filteredParts.filter(part => 
+        part.lead_time_weeks !== null && part.lead_time_weeks <= filters.leadTimeMax!
+      )
+    }
+    
+    if (filters.valueParam1Min !== undefined) {
+      filteredParts = filteredParts.filter(part => 
+        part.value_param_1 !== null && part.value_param_1 >= filters.valueParam1Min!
+      )
+    }
+    
+    if (filters.valueParam1Max !== undefined) {
+      filteredParts = filteredParts.filter(part => 
+        part.value_param_1 !== null && part.value_param_1 <= filters.valueParam1Max!
+      )
+    }
+    
+    if (filters.valueParam2Min !== undefined) {
+      filteredParts = filteredParts.filter(part => 
+        part.value_param_2 !== null && part.value_param_2 >= filters.valueParam2Min!
+      )
+    }
+    
+    if (filters.valueParam2Max !== undefined) {
+      filteredParts = filteredParts.filter(part => 
+        part.value_param_2 !== null && part.value_param_2 <= filters.valueParam2Max!
+      )
+    }
+    
+    // Date filters
+    if (filters.orderDateFrom) {
+      filteredParts = filteredParts.filter(part => 
+        part.order_date && part.order_date >= filters.orderDateFrom!
+      )
+    }
+    
+    if (filters.orderDateTo) {
+      filteredParts = filteredParts.filter(part => 
+        part.order_date && part.order_date <= filters.orderDateTo!
+      )
+    }
+    
+    if (filters.updateDateFrom) {
+      filteredParts = filteredParts.filter(part => 
+        part.last_update_date && part.last_update_date >= filters.updateDateFrom!
+      )
+    }
+    
+    if (filters.updateDateTo) {
+      filteredParts = filteredParts.filter(part => 
+        part.last_update_date && part.last_update_date <= filters.updateDateTo!
+      )
+    }
+    
+    // Boolean filters
+    if (filters.budgetItemsOnly === true) {
+      filteredParts = filteredParts.filter(part => part.is_budget_item === true)
+    } else if (filters.budgetItemsOnly === false) {
+      filteredParts = filteredParts.filter(part => part.is_budget_item === false)
+    }
+    
+    if (filters.hasSpares === true) {
+      filteredParts = filteredParts.filter(part => part.spare_quantity > 0)
+    } else if (filters.hasSpares === false) {
+      filteredParts = filteredParts.filter(part => part.spare_quantity === 0)
+    }
+    
+    // Update results with filtered parts
+    results = {
+      ...results,
+      parts: filteredParts,
+      total_count: filteredParts.length,
+      total_pages: Math.ceil(filteredParts.length / (filters.limit || 50))
+    }
+  }
+  
+  return results
 }
 
 /**

@@ -13,7 +13,7 @@ interface PartsTableProps {
 }
 
 export async function PartsTable({ searchParams }: PartsTableProps) {
-  // Parse search parameters
+  // Parse search parameters including sorting
   const params = {
     po: typeof searchParams.po === 'string' ? searchParams.po : undefined,
     customer: typeof searchParams.customer === 'string' ? searchParams.customer : undefined,
@@ -23,6 +23,8 @@ export async function PartsTable({ searchParams }: PartsTableProps) {
     status: typeof searchParams.status === 'string' ? parseInt(searchParams.status) : undefined,
     project: typeof searchParams.project === 'string' ? searchParams.project : undefined,
     category: typeof searchParams.category === 'string' ? searchParams.category : undefined,
+    sort: typeof searchParams.sort === 'string' ? searchParams.sort : undefined,
+    order: typeof searchParams.order === 'string' ? searchParams.order as 'asc' | 'desc' : undefined,
     limit: 50,
     offset: 0
   }

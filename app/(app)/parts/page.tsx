@@ -8,7 +8,7 @@ export const revalidate = 0
 
 import { Suspense } from 'react'
 import { PartsTable } from '@/components/parts/parts-table'
-import { PartsFilters } from '@/components/parts/parts-filters'
+import { EnhancedPartsFilters } from '@/components/parts/enhanced-parts-filters'
 import { PartsHeader } from '@/components/parts/parts-header'
 import { Card } from '@/components/ui/card'
 
@@ -22,9 +22,9 @@ export default function PartsPage({
       {/* Page Header */}
       <PartsHeader />
       
-      {/* Filters */}
+      {/* Enhanced Filters */}
       <Card className="p-6">
-        <PartsFilters />
+        <EnhancedPartsFilters />
       </Card>
       
       {/* Parts Table */}
