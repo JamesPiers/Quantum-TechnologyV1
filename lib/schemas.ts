@@ -271,6 +271,7 @@ export const UpdatePartSchema = CreatePartSchema.partial()
 
 // Search schemas
 export const SearchPartsSchema = z.object({
+  // Basic search fields
   po: z.string().optional(),
   customer: z.string().optional(),
   part: z.string().optional(),
@@ -279,6 +280,38 @@ export const SearchPartsSchema = z.object({
   status: StatusCodeEnum.optional(),
   project: z.string().optional(),
   category: CategoryEnum.optional(),
+  
+  // Enhanced filter fields
+  resp: z.string().optional(), // responsible_person
+  description: z.string().optional(),
+  part_number: z.string().optional(),
+  section: z.string().optional(),
+  drawing: z.string().optional(),
+  drawing_id: z.string().optional(),
+  notes: z.string().optional(),
+  currency: CurrencyEnum.optional(),
+  location_code: z.string().optional(),
+  last_updated_by: z.string().optional(),
+  
+  // Range filters (will be handled as strings and converted)
+  quantity_min: z.string().optional(),
+  quantity_max: z.string().optional(),
+  price_min: z.string().optional(),
+  price_max: z.string().optional(),
+  
+  // Date filters
+  order_date_from: z.string().optional(),
+  order_date_to: z.string().optional(),
+  
+  // Boolean filters
+  budget_items_only: z.string().optional(),
+  has_spares: z.string().optional(),
+  
+  // Sorting
+  sort: z.string().optional(),
+  order: z.enum(['asc', 'desc']).optional(),
+  
+  // Pagination
   limit: z.number().int().min(1).max(500).default(50),
   offset: z.number().int().min(0).default(0)
 })

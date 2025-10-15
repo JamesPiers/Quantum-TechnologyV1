@@ -8,9 +8,10 @@ import { ServerDB } from './supabase-server'
 /**
  * Main search function for parts with pagination, filtering, and sorting
  */
-export async function searchParts(params: SearchParts & { sort?: string; order?: 'asc' | 'desc' }): Promise<SearchResults> {
+export async function searchParts(params: SearchParts): Promise<SearchResults> {
   const db = await ServerDB.create()
   
+  // Use basic fields for database query
   const { data, error } = await db.getParts({
     po: params.po,
     customer: params.customer,
@@ -20,8 +21,8 @@ export async function searchParts(params: SearchParts & { sort?: string; order?:
     status: params.status,
     project: params.project,
     category: params.category,
-    limit: params.limit,
-    offset: params.offset
+    limit: 1000, // Get more results for client-side filtering
+    offset: 0
   })
   
   if (error) {
@@ -39,13 +40,127 @@ export async function searchParts(params: SearchParts & { sort?: string; order?:
   }
   
   const result = data[0]
-  const partsData = result.parts_data ? JSON.parse(JSON.stringify(result.parts_data)) as PartReadable[] : []
-  const totalCount = result.total_count || 0
+  let parts = result.parts_data ? JSON.parse(JSON.stringify(result.parts_data)) as PartReadable[] : []
   
-  // Client-side sorting if not handled by database
-  let parts = partsData
+  // Apply enhanced client-side filtering
+  if (parts.length > 0) {
+    // Text filters
+    if (params.resp) {
+      parts = parts.filter(part => 
+        part.responsible_person?.toLowerCase().includes(params.resp!.toLowerCase())
+      )
+    }
+    
+    if (params.description) {
+      parts = parts.filter(part => 
+        part.description?.toLowerCase().includes(params.description!.toLowerCase())
+      )
+    }
+    
+    if (params.part_number) {
+      parts = parts.filter(part => 
+        part.part_number?.toLowerCase().includes(params.part_number!.toLowerCase())
+      )
+    }
+    
+    if (params.section) {
+      parts = parts.filter(part => 
+        part.section?.toLowerCase().includes(params.section!.toLowerCase())
+      )
+    }
+    
+    if (params.drawing) {
+      parts = parts.filter(part => 
+        part.drawing?.toLowerCase().includes(params.drawing!.toLowerCase())
+      )
+    }
+    
+    if (params.drawing_id) {
+      parts = parts.filter(part => 
+        part.drawing_id?.toLowerCase().includes(params.drawing_id!.toLowerCase())
+      )
+    }
+    
+    if (params.notes) {
+      parts = parts.filter(part => 
+        part.notes?.toLowerCase().includes(params.notes!.toLowerCase())
+      )
+    }
+    
+    if (params.last_updated_by) {
+      parts = parts.filter(part => 
+        part.last_updated_by?.toLowerCase().includes(params.last_updated_by!.toLowerCase())
+      )
+    }
+    
+    // Dropdown filters
+    if (params.currency) {
+      parts = parts.filter(part => part.currency_code === params.currency)
+    }
+    
+    if (params.location_code) {
+      parts = parts.filter(part => part.location_code === params.location_code)
+    }
+    
+    // Range filters
+    if (params.quantity_min) {
+      const min = parseInt(params.quantity_min)
+      if (!isNaN(min)) {
+        parts = parts.filter(part => part.quantity >= min)
+      }
+    }
+    
+    if (params.quantity_max) {
+      const max = parseInt(params.quantity_max)
+      if (!isNaN(max)) {
+        parts = parts.filter(part => part.quantity <= max)
+      }
+    }
+    
+    if (params.price_min) {
+      const min = parseFloat(params.price_min)
+      if (!isNaN(min)) {
+        parts = parts.filter(part => part.unit_price !== null && part.unit_price >= min)
+      }
+    }
+    
+    if (params.price_max) {
+      const max = parseFloat(params.price_max)
+      if (!isNaN(max)) {
+        parts = parts.filter(part => part.unit_price !== null && part.unit_price <= max)
+      }
+    }
+    
+    // Date filters
+    if (params.order_date_from) {
+      parts = parts.filter(part => 
+        part.order_date && part.order_date >= params.order_date_from!
+      )
+    }
+    
+    if (params.order_date_to) {
+      parts = parts.filter(part => 
+        part.order_date && part.order_date <= params.order_date_to!
+      )
+    }
+    
+    // Boolean filters
+    if (params.budget_items_only === 'true') {
+      parts = parts.filter(part => part.is_budget_item === true)
+    } else if (params.budget_items_only === 'false') {
+      parts = parts.filter(part => part.is_budget_item === false)
+    }
+    
+    if (params.has_spares === 'true') {
+      parts = parts.filter(part => part.spare_quantity > 0)
+    } else if (params.has_spares === 'false') {
+      parts = parts.filter(part => part.spare_quantity === 0)
+    }
+  }
+  
+  // Client-side sorting
   if (params.sort && params.order && parts.length > 0) {
-    parts = [...partsData].sort((a, b) => {
+    parts = [...parts].sort((a, b) => {
       const sortField = params.sort!
       let aValue = (a as any)[sortField]
       let bValue = (b as any)[sortField]
@@ -67,8 +182,14 @@ export async function searchParts(params: SearchParts & { sort?: string; order?:
     })
   }
   
+  // Apply pagination after filtering and sorting
+  const totalCount = parts.length
+  const startIndex = params.offset
+  const endIndex = startIndex + params.limit
+  const paginatedParts = parts.slice(startIndex, endIndex)
+  
   return {
-    parts,
+    parts: paginatedParts,
     total_count: totalCount,
     page: Math.floor(params.offset / params.limit) + 1,
     limit: params.limit,

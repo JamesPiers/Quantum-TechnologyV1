@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select'
+import { ComboBox, ComboBoxOption } from '@/components/ui/combo-box'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { 
@@ -33,6 +34,7 @@ import {
   FILTER_FIELDS, 
   FILTER_FIELD_GROUPS, 
   DEFAULT_FILTER_PREFERENCES,
+  loadFilterOptions,
   type FilterFieldConfig 
 } from '@/lib/filter-config'
 import {
@@ -66,6 +68,9 @@ export function EnhancedPartsFilters() {
   
   // Filter values state
   const [filters, setFilters] = useState<FilterValue>({})
+  
+  // Async options state
+  const [asyncOptions, setAsyncOptions] = useState<Record<string, ComboBoxOption[]>>({})
   
   // Load preferences from localStorage
   useEffect(() => {
@@ -113,6 +118,37 @@ export function EnhancedPartsFilters() {
     setFilters(initialFilters)
   }, [searchParams])
   
+  // Load async options for active fields
+  useEffect(() => {
+    const loadAsyncFieldOptions = async () => {
+      const asyncFields = preferences.activeFields.filter(fieldKey => {
+        const config = FILTER_FIELDS[fieldKey]
+        return config?.async === true
+      })
+      
+      const optionsPromises = asyncFields.map(async (fieldKey) => {
+        try {
+          const options = await loadFilterOptions(fieldKey)
+          return { fieldKey, options }
+        } catch (error) {
+          console.error(`Error loading options for ${fieldKey}:`, error)
+          return { fieldKey, options: [] }
+        }
+      })
+      
+      const results = await Promise.all(optionsPromises)
+      const newAsyncOptions: Record<string, ComboBoxOption[]> = {}
+      
+      results.forEach(({ fieldKey, options }) => {
+        newAsyncOptions[fieldKey] = options
+      })
+      
+      setAsyncOptions(prev => ({ ...prev, ...newAsyncOptions }))
+    }
+    
+    loadAsyncFieldOptions()
+  }, [preferences.activeFields])
+  
   // Save preferences to localStorage
   const savePreferences = useCallback((newPreferences: FilterPreferences) => {
     try {
@@ -142,6 +178,19 @@ export function EnhancedPartsFilters() {
     // Map filter values to URL parameters
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== '' && value !== null) {
+        // Handle range filters
+        if (Array.isArray(value)) {
+          const [min, max] = value
+          if (min !== undefined && min !== '') {
+            params.set(`${key}_min`, String(min))
+          }
+          if (max !== undefined && max !== '') {
+            params.set(`${key}_max`, String(max))
+          }
+          return
+        }
+        
+        // Handle special field mappings
         switch (key) {
           case 'search':
             params.set('part', String(value))
@@ -152,9 +201,32 @@ export function EnhancedPartsFilters() {
           case 'responsible_person':
             params.set('resp', String(value))
             break
-          case 'part_number':
-            // Search across multiple fields for part number
-            params.set('part', String(value))
+          case 'drawing_id':
+            params.set('drawing_id', String(value))
+            break
+          case 'location_code':
+            params.set('location_code', String(value))
+            break
+          case 'last_updated_by':
+            params.set('last_updated_by', String(value))
+            break
+          case 'is_budget_item':
+            params.set('budget_items_only', String(value))
+            break
+          case 'has_spares':
+            params.set('has_spares', String(value))
+            break
+          case 'order_date':
+            if (Array.isArray(value) && value.length === 2) {
+              if (value[0]) params.set('order_date_from', String(value[0]))
+              if (value[1]) params.set('order_date_to', String(value[1]))
+            }
+            break
+          case 'last_update_date':
+            if (Array.isArray(value) && value.length === 2) {
+              if (value[0]) params.set('update_date_from', String(value[0]))
+              if (value[1]) params.set('update_date_to', String(value[1]))
+            }
             break
           default:
             params.set(key, String(value))
@@ -236,6 +308,21 @@ export function EnhancedPartsFilters() {
         )
       
       case 'select':
+        // Handle async fields with ComboBox
+        if (config.async) {
+          const options = asyncOptions[fieldKey] || []
+          return (
+            <ComboBox
+              options={options}
+              value={String(value || '')}
+              onValueChange={(newValue) => handleFilterChange(fieldKey, newValue === '' ? undefined : newValue)}
+              placeholder={config.placeholder || `Select ${config.label.toLowerCase()}...`}
+              allowCustomValue={true}
+            />
+          )
+        }
+        
+        // Handle regular select fields
         return (
           <Select
             value={String(value || '')}

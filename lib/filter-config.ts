@@ -82,15 +82,19 @@ export const FILTER_FIELDS: Record<string, FilterFieldConfig> = {
   project: {
     key: 'project',
     label: 'Project',
-    type: 'text',
-    placeholder: 'Enter project code...'
+    type: 'select',
+    async: true,
+    searchable: true,
+    placeholder: 'Select or type project...'
   },
   
   section: {
     key: 'section',
     label: 'Section',
-    type: 'text',
-    placeholder: 'Enter project section...'
+    type: 'select',
+    async: true,
+    searchable: true,
+    placeholder: 'Select or type section...'
   },
   
   drawing: {
@@ -118,8 +122,10 @@ export const FILTER_FIELDS: Record<string, FilterFieldConfig> = {
   responsible_person: {
     key: 'responsible_person',
     label: 'Responsible Person',
-    type: 'text',
-    placeholder: 'Enter initials...'
+    type: 'select',
+    async: true,
+    searchable: true,
+    placeholder: 'Select or type person...'
   },
   
   // Supplier and manufacturer (async loaded)
@@ -129,7 +135,7 @@ export const FILTER_FIELDS: Record<string, FilterFieldConfig> = {
     type: 'select',
     async: true,
     searchable: true,
-    placeholder: 'Select supplier...'
+    placeholder: 'Select or type supplier...'
   },
   
   manufacturer: {
@@ -138,7 +144,7 @@ export const FILTER_FIELDS: Record<string, FilterFieldConfig> = {
     type: 'select',
     async: true,
     searchable: true,
-    placeholder: 'Select manufacturer...'
+    placeholder: 'Select or type manufacturer...'
   },
   
   // Status
@@ -343,4 +349,70 @@ export const SORT_FIELDS: Record<string, SortConfig> = {
   project: { key: 'project', label: 'Project', sortable: true, defaultOrder: 'asc' },
   purchase_order: { key: 'purchase_order', label: 'PO', sortable: true, defaultOrder: 'asc' },
   updated_at: { key: 'updated_at', label: 'Last Updated', sortable: true, defaultOrder: 'desc' }
+}
+
+/**
+ * Load dropdown options for async filter fields
+ */
+export async function loadFilterOptions(fieldKey: string): Promise<FilterFieldOption[]> {
+  try {
+    // For now, we'll use the existing search facets API to get the data
+    // In a real implementation, you might have dedicated endpoints for each field type
+    
+    switch (fieldKey) {
+      case 'supplier':
+      case 'manufacturer':
+      case 'responsible_person':
+      case 'project':
+      case 'section': {
+        const response = await fetch('/api/search')
+        if (!response.ok) return []
+        
+        const data = await response.json()
+        
+        // Extract unique values from the parts data
+        const uniqueValues = new Set<string>()
+        
+        if (data.parts) {
+          data.parts.forEach((part: any) => {
+            let value = ''
+            switch (fieldKey) {
+              case 'supplier':
+                value = part.supplier_name
+                break
+              case 'manufacturer':
+                value = part.manufacturer_name
+                break
+              case 'responsible_person':
+                value = part.responsible_person
+                break
+              case 'project':
+                value = part.project
+                break
+              case 'section':
+                value = part.section
+                break
+            }
+            
+            if (value && value.trim()) {
+              uniqueValues.add(value.trim())
+            }
+          })
+        }
+        
+        return Array.from(uniqueValues)
+          .sort()
+          .map(value => ({
+            value,
+            label: value
+          }))
+      }
+      
+      default:
+        return []
+    }
+  } catch (error) {
+    console.error(`Error loading options for ${fieldKey}:`, error)
+    return []
+  }
 }
