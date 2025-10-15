@@ -96,24 +96,46 @@ export async function GET(request: NextRequest) {
         if (error) {
           console.error(`[Filter Options API] RPC error for ${field}:`, error)
           // Fallback to regular query if RPC doesn't exist
-          const { data: fallbackData, error: fallbackError } = await client
-            .from('v_parts_readable')
-            .select(dbField)
-            .not(dbField, 'is', null)
+          // Use pagination to get all unique values without timeout
+          const uniqueValues = new Set<string>()
+          let page = 0
+          const pageSize = 1000
+          let hasMore = true
           
-          if (fallbackError) {
-            console.error(`[Filter Options API] Fallback error for ${field}:`, fallbackError)
-            throw new Error(`Failed to fetch ${field}: ${fallbackError.message}`)
+          while (hasMore && page < 20) { // Max 20 pages = 20k rows
+            const { data: fallbackData, error: fallbackError } = await client
+              .from('v_parts_readable')
+              .select(dbField)
+              .not(dbField, 'is', null)
+              .range(page * pageSize, (page + 1) * pageSize - 1)
+            
+            if (fallbackError) {
+              console.error(`[Filter Options API] Fallback error for ${field} page ${page}:`, fallbackError)
+              break
+            }
+            
+            if (!fallbackData || fallbackData.length === 0) {
+              hasMore = false
+              break
+            }
+            
+            // Extract unique values from this page
+            fallbackData.forEach((row: any) => {
+              const value = row[dbField]
+              if (value && typeof value === 'string' && value.trim()) {
+                uniqueValues.add(value.trim())
+              }
+            })
+            
+            // Check if we got a full page (if not, we're done)
+            if (fallbackData.length < pageSize) {
+              hasMore = false
+            }
+            
+            page++
           }
           
-          // Extract unique values manually
-          const uniqueValues = new Set<string>()
-          fallbackData?.forEach((row: any) => {
-            const value = row[dbField]
-            if (value && typeof value === 'string' && value.trim()) {
-              uniqueValues.add(value.trim())
-            }
-          })
+          console.log(`[Filter Options API] Extracted ${uniqueValues.size} unique values for ${field} from ${page} pages`)
           
           options = Array.from(uniqueValues)
             .sort()
