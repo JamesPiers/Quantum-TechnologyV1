@@ -41,12 +41,13 @@ export async function searchParts(params: SearchParts & { sort?: string; order?:
   }
   
   const result = data[0]
-  let parts = result.parts_data ? JSON.parse(JSON.stringify(result.parts_data)) as PartReadable[] : []
+  const partsData = result.parts_data ? JSON.parse(JSON.stringify(result.parts_data)) as PartReadable[] : []
   const totalCount = result.total_count || 0
   
   // Client-side sorting if not handled by database
+  let parts = partsData
   if (params.sort && params.order && parts.length > 0) {
-    parts.sort((a, b) => {
+    parts = [...partsData].sort((a, b) => {
       const sortField = params.sort!
       let aValue = (a as any)[sortField]
       let bValue = (b as any)[sortField]

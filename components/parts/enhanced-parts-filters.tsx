@@ -35,14 +35,12 @@ import {
   DEFAULT_FILTER_PREFERENCES,
   type FilterFieldConfig 
 } from '@/lib/filter-config'
-import { CategoryLabels } from '@/lib/schemas'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -65,7 +63,6 @@ export function EnhancedPartsFilters() {
   
   // Filter preferences state
   const [preferences, setPreferences] = useState<FilterPreferences>(DEFAULT_FILTER_PREFERENCES)
-  const [showFieldSelector, setShowFieldSelector] = useState(false)
   
   // Filter values state
   const [filters, setFilters] = useState<FilterValue>({})
