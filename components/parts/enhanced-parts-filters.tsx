@@ -128,7 +128,12 @@ export function EnhancedPartsFilters() {
         return config?.async === true && !asyncOptions[fieldKey]
       })
       
-      if (asyncFields.length === 0) return
+      if (asyncFields.length === 0) {
+        console.log('[Enhanced Filters] No new async fields to load')
+        return
+      }
+      
+      console.log('[Enhanced Filters] Loading async fields:', asyncFields)
       
       // Set loading state for all fields we're about to fetch
       const newLoadingState: Record<string, boolean> = {}
@@ -140,12 +145,12 @@ export function EnhancedPartsFilters() {
       // Fetch options for each field
       const optionsPromises = asyncFields.map(async (fieldKey) => {
         try {
-          console.log(`Loading options for ${fieldKey}...`)
+          console.log(`[Enhanced Filters] Loading options for ${fieldKey}...`)
           const options = await loadFilterOptions(fieldKey)
-          console.log(`Loaded ${options.length} options for ${fieldKey}`)
+          console.log(`[Enhanced Filters] Loaded ${options.length} options for ${fieldKey}`)
           return { fieldKey, options, success: true }
         } catch (error) {
-          console.error(`Error loading options for ${fieldKey}:`, error)
+          console.error(`[Enhanced Filters] Error loading options for ${fieldKey}:`, error)
           return { fieldKey, options: [], success: false }
         }
       })
@@ -158,16 +163,18 @@ export function EnhancedPartsFilters() {
         newAsyncOptions[fieldKey] = options
         newLoadingComplete[fieldKey] = false
         if (!success) {
-          console.warn(`Failed to load options for ${fieldKey}, using empty array`)
+          console.warn(`[Enhanced Filters] Failed to load options for ${fieldKey}, using empty array`)
         }
       })
       
+      console.log('[Enhanced Filters] Setting async options:', newAsyncOptions)
       setAsyncOptions(prev => ({ ...prev, ...newAsyncOptions }))
       setLoadingOptions(prev => ({ ...prev, ...newLoadingComplete }))
     }
     
     loadAsyncFieldOptions()
-  }, [preferences.activeFields, asyncOptions])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferences.activeFields])
   
   // Save preferences to localStorage
   const savePreferences = useCallback((newPreferences: FilterPreferences) => {
@@ -333,6 +340,13 @@ export function EnhancedPartsFilters() {
           const options = asyncOptions[fieldKey] || []
           const isLoading = loadingOptions[fieldKey] || false
           
+          // Debug logging
+          console.log(`[Filter Input] Rendering ${fieldKey}:`, { 
+            optionsCount: options.length, 
+            isLoading,
+            hasOptions: options.length > 0
+          })
+          
           return (
             <ComboBox
               options={options}
@@ -340,7 +354,7 @@ export function EnhancedPartsFilters() {
               onValueChange={(newValue) => handleFilterChange(fieldKey, newValue === '' ? undefined : newValue)}
               placeholder={isLoading ? 'Loading options...' : (config.placeholder || `Select ${config.label.toLowerCase()}...`)}
               allowCustomValue={true}
-              disabled={isLoading}
+              isLoading={isLoading}
             />
           )
         }

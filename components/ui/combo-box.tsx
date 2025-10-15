@@ -30,6 +30,7 @@ interface ComboBoxProps {
   className?: string
   disabled?: boolean
   allowCustomValue?: boolean
+  isLoading?: boolean
 }
 
 export function ComboBox({
@@ -39,7 +40,8 @@ export function ComboBox({
   placeholder = "Select or type...",
   className,
   disabled = false,
-  allowCustomValue = true
+  allowCustomValue = true,
+  isLoading = false
 }: ComboBoxProps) {
   const [open, setOpen] = React.useState(false)
   const [searchTerm, setSearchTerm] = React.useState('')
@@ -48,6 +50,18 @@ export function ComboBox({
   const filteredOptions = options.filter(option =>
     option.label.toLowerCase().includes(searchTerm.toLowerCase())
   )
+  
+  // Debug logging
+  React.useEffect(() => {
+    if (open) {
+      console.log('[ComboBox] Dropdown opened:', { 
+        optionsCount: options.length, 
+        filteredCount: filteredOptions.length,
+        isLoading,
+        searchTerm 
+      })
+    }
+  }, [open, options.length, filteredOptions.length, isLoading, searchTerm])
 
   const handleSelect = (selectedValue: string) => {
     onValueChange(selectedValue)
@@ -129,9 +143,13 @@ export function ComboBox({
             </>
           )}
           
-          {filteredOptions.length === 0 ? (
+          {isLoading ? (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              No options found.
+              Loading options...
+            </div>
+          ) : filteredOptions.length === 0 ? (
+            <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+              {options.length === 0 ? 'No options available.' : 'No options found.'}
             </div>
           ) : (
             filteredOptions.map((option) => (
