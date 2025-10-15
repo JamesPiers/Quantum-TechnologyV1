@@ -24,107 +24,103 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // Validate field name
-    const validFields = [
-      'supplier', 'manufacturer', 'responsible_person', 'project', 
-      'section', 'drawing', 'drawing_id', 'purchase_order', 
-      'location_code', 'last_updated_by'
-    ]
-    
-    if (!validFields.includes(field)) {
-      console.error(`[Filter Options API] Invalid field: ${field}`)
-      return NextResponse.json(
-        { error: `Invalid field: ${field}` },
-        { status: 400 }
-      )
-    }
-    
     const db = await ServerDB.create()
     
-    // Get ALL parts to extract unique values
-    // Using a high limit to ensure we get all data
-    const { data, error } = await db.getParts({
-      limit: 10000,
-      offset: 0
-    })
+    let options: { value: string; label: string }[] = []
     
-    if (error) {
-      console.error(`[Filter Options API] Database error:`, error)
-      throw new Error(`Failed to fetch parts: ${error.message}`)
-    }
-    
-    if (!data || data.length === 0) {
-      console.log(`[Filter Options API] No data returned from database`)
-      return NextResponse.json({ options: [] })
-    }
-    
-    const result = data[0]
-    const parts = result.parts_data ? JSON.parse(JSON.stringify(result.parts_data)) : []
-    
-    console.log(`[Filter Options API] Processing ${parts.length} parts for field: ${field}`)
-    
-    // Debug: Show a sample part to see structure
-    if (parts.length > 0) {
-      console.log(`[Filter Options API] Sample part structure:`, Object.keys(parts[0]))
-      console.log(`[Filter Options API] Sample ${field} value:`, parts[0][field === 'supplier' ? 'supplier_name' : field === 'manufacturer' ? 'manufacturer_name' : field])
-    }
-    
-    // Extract unique values based on the field
-    const uniqueValues = new Set<string>()
-    
-    parts.forEach((part: any, index: number) => {
-      let value = ''
-      
-      switch (field) {
-        case 'supplier':
-          value = part.supplier_name
-          break
-        case 'manufacturer':
-          value = part.manufacturer_name
-          break
-        case 'responsible_person':
-          value = part.responsible_person
-          break
-        case 'project':
-          value = part.project
-          break
-        case 'section':
-          value = part.section
-          break
-        case 'drawing':
-          value = part.drawing
-          break
-        case 'drawing_id':
-          value = part.drawing_id
-          break
-        case 'purchase_order':
-          value = part.purchase_order
-          break
-        case 'location_code':
-          value = part.location_code
-          break
-        case 'last_updated_by':
-          value = part.last_updated_by
-          break
+    // Use efficient queries based on field type
+    switch (field) {
+      case 'supplier': {
+        // Query suppliers table directly
+        const { data: suppliers } = await db.getSuppliers()
+        if (suppliers) {
+          options = suppliers
+            .filter(s => s.name && s.name.trim())
+            .map(s => ({
+              value: s.name,
+              label: s.name
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+        }
+        break
       }
       
-      if (value && value.trim()) {
-        uniqueValues.add(value.trim())
+      case 'manufacturer': {
+        // Query manufacturers table directly
+        const { data: manufacturers } = await db.getManufacturers()
+        if (manufacturers) {
+          options = manufacturers
+            .filter(m => m.name && m.name.trim())
+            .map(m => ({
+              value: m.name,
+              label: m.name
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+        }
+        break
       }
       
-      // Debug first 3 parts for the requested field
-      if (index < 3) {
-        console.log(`[Filter Options API] Part ${index} ${field} value:`, value || '(empty)')
+      case 'responsible_person':
+      case 'project':
+      case 'section':
+      case 'drawing':
+      case 'drawing_id':
+      case 'purchase_order':
+      case 'location_code':
+      case 'last_updated_by': {
+        // Use direct SQL query for DISTINCT values from view
+        const fieldMap: Record<string, string> = {
+          'responsible_person': 'responsible_person',
+          'project': 'project',
+          'section': 'section',
+          'drawing': 'drawing',
+          'drawing_id': 'drawing_id',
+          'purchase_order': 'purchase_order',
+          'location_code': 'location_code',
+          'last_updated_by': 'last_updated_by'
+        }
+        
+        const dbField = fieldMap[field]
+        const supabase = await import('@/lib/supabase-server').then(m => m.createClient())
+        const client = await supabase
+        
+        const { data: distinctValues, error } = await client
+          .from('v_parts_readable')
+          .select(dbField)
+          .not(dbField, 'is', null)
+          .order(dbField)
+        
+        if (error) {
+          console.error(`[Filter Options API] Error fetching distinct ${field}:`, error)
+          throw new Error(`Failed to fetch ${field}: ${error.message}`)
+        }
+        
+        if (distinctValues) {
+          const uniqueValues = new Set<string>()
+          distinctValues.forEach((row: any) => {
+            const value = row[dbField]
+            if (value && typeof value === 'string' && value.trim()) {
+              uniqueValues.add(value.trim())
+            }
+          })
+          
+          options = Array.from(uniqueValues)
+            .sort()
+            .map(value => ({
+              value,
+              label: value
+            }))
+        }
+        break
       }
-    })
-    
-    // Sort and format options
-    const options = Array.from(uniqueValues)
-      .sort()
-      .map(value => ({
-        value,
-        label: value
-      }))
+      
+      default:
+        console.error(`[Filter Options API] Invalid field: ${field}`)
+        return NextResponse.json(
+          { error: `Invalid field: ${field}` },
+          { status: 400 }
+        )
+    }
     
     console.log(`[Filter Options API] Returning ${options.length} unique options for field: ${field}`)
     
