@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
           
           options = Array.from(uniqueValues)
             .sort()
-            .map(value => ({
+            .map((value: string) => ({
               value,
               label: value
             }))
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
             .filter((value: any) => value && typeof value === 'string' && value.trim())
             .map((value: string) => value.trim())
             .sort()
-            .map(value => ({
+            .map((value: string) => ({
               value,
               label: value
             }))
