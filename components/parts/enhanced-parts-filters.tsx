@@ -71,6 +71,7 @@ export function EnhancedPartsFilters() {
   
   // Async options state
   const [asyncOptions, setAsyncOptions] = useState<Record<string, ComboBoxOption[]>>({})
+  const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>({})
   
   // Load preferences from localStorage
   useEffect(() => {
@@ -123,31 +124,50 @@ export function EnhancedPartsFilters() {
     const loadAsyncFieldOptions = async () => {
       const asyncFields = preferences.activeFields.filter(fieldKey => {
         const config = FILTER_FIELDS[fieldKey]
-        return config?.async === true
+        // Only load if it's async and we haven't loaded it yet
+        return config?.async === true && !asyncOptions[fieldKey]
       })
       
+      if (asyncFields.length === 0) return
+      
+      // Set loading state for all fields we're about to fetch
+      const newLoadingState: Record<string, boolean> = {}
+      asyncFields.forEach(fieldKey => {
+        newLoadingState[fieldKey] = true
+      })
+      setLoadingOptions(prev => ({ ...prev, ...newLoadingState }))
+      
+      // Fetch options for each field
       const optionsPromises = asyncFields.map(async (fieldKey) => {
         try {
+          console.log(`Loading options for ${fieldKey}...`)
           const options = await loadFilterOptions(fieldKey)
-          return { fieldKey, options }
+          console.log(`Loaded ${options.length} options for ${fieldKey}`)
+          return { fieldKey, options, success: true }
         } catch (error) {
           console.error(`Error loading options for ${fieldKey}:`, error)
-          return { fieldKey, options: [] }
+          return { fieldKey, options: [], success: false }
         }
       })
       
       const results = await Promise.all(optionsPromises)
       const newAsyncOptions: Record<string, ComboBoxOption[]> = {}
+      const newLoadingComplete: Record<string, boolean> = {}
       
-      results.forEach(({ fieldKey, options }) => {
+      results.forEach(({ fieldKey, options, success }) => {
         newAsyncOptions[fieldKey] = options
+        newLoadingComplete[fieldKey] = false
+        if (!success) {
+          console.warn(`Failed to load options for ${fieldKey}, using empty array`)
+        }
       })
       
       setAsyncOptions(prev => ({ ...prev, ...newAsyncOptions }))
+      setLoadingOptions(prev => ({ ...prev, ...newLoadingComplete }))
     }
     
     loadAsyncFieldOptions()
-  }, [preferences.activeFields])
+  }, [preferences.activeFields, asyncOptions])
   
   // Save preferences to localStorage
   const savePreferences = useCallback((newPreferences: FilterPreferences) => {
@@ -311,13 +331,16 @@ export function EnhancedPartsFilters() {
         // Handle async fields with ComboBox
         if (config.async) {
           const options = asyncOptions[fieldKey] || []
+          const isLoading = loadingOptions[fieldKey] || false
+          
           return (
             <ComboBox
               options={options}
               value={String(value || '')}
               onValueChange={(newValue) => handleFilterChange(fieldKey, newValue === '' ? undefined : newValue)}
-              placeholder={config.placeholder || `Select ${config.label.toLowerCase()}...`}
+              placeholder={isLoading ? 'Loading options...' : (config.placeholder || `Select ${config.label.toLowerCase()}...`)}
               allowCustomValue={true}
+              disabled={isLoading}
             />
           )
         }

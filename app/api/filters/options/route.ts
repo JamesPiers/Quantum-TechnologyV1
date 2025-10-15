@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const field = searchParams.get('field')
     
+    console.log(`[Filter Options API] Fetching options for field: ${field}`)
+    
     if (!field) {
       return NextResponse.json(
         { error: 'Field parameter is required' },
@@ -22,24 +24,44 @@ export async function GET(request: NextRequest) {
       )
     }
     
+    // Validate field name
+    const validFields = [
+      'supplier', 'manufacturer', 'responsible_person', 'project', 
+      'section', 'drawing', 'drawing_id', 'purchase_order', 
+      'location_code', 'last_updated_by'
+    ]
+    
+    if (!validFields.includes(field)) {
+      console.error(`[Filter Options API] Invalid field: ${field}`)
+      return NextResponse.json(
+        { error: `Invalid field: ${field}` },
+        { status: 400 }
+      )
+    }
+    
     const db = await ServerDB.create()
     
-    // Get ALL parts (no limit) to extract unique values
+    // Get ALL parts to extract unique values
+    // Using a high limit to ensure we get all data
     const { data, error } = await db.getParts({
-      limit: 10000, // High limit to get all parts
+      limit: 10000,
       offset: 0
     })
     
     if (error) {
+      console.error(`[Filter Options API] Database error:`, error)
       throw new Error(`Failed to fetch parts: ${error.message}`)
     }
     
     if (!data || data.length === 0) {
+      console.log(`[Filter Options API] No data returned from database`)
       return NextResponse.json({ options: [] })
     }
     
     const result = data[0]
     const parts = result.parts_data ? JSON.parse(JSON.stringify(result.parts_data)) : []
+    
+    console.log(`[Filter Options API] Processing ${parts.length} parts for field: ${field}`)
     
     // Extract unique values based on the field
     const uniqueValues = new Set<string>()
@@ -78,11 +100,6 @@ export async function GET(request: NextRequest) {
         case 'last_updated_by':
           value = part.last_updated_by
           break
-        default:
-          return NextResponse.json(
-            { error: 'Invalid field' },
-            { status: 400 }
-          )
       }
       
       if (value && value.trim()) {
@@ -98,10 +115,12 @@ export async function GET(request: NextRequest) {
         label: value
       }))
     
+    console.log(`[Filter Options API] Returning ${options.length} unique options for field: ${field}`)
+    
     return NextResponse.json({ options })
     
   } catch (error) {
-    console.error('Filter options API error:', error)
+    console.error('[Filter Options API] Error:', error)
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     

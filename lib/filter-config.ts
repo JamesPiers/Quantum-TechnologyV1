@@ -363,25 +363,43 @@ export const SORT_FIELDS: Record<string, SortConfig> = {
  */
 export async function loadFilterOptions(fieldKey: string): Promise<{ value: string; label: string }[]> {
   try {
+    console.log(`[loadFilterOptions] Fetching options for: ${fieldKey}`)
+    
     // Use dedicated filter options API endpoint
-    const response = await fetch(`/api/filters/options?field=${fieldKey}`)
+    const response = await fetch(`/api/filters/options?field=${fieldKey}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Include cookies for authentication
+    })
+    
+    console.log(`[loadFilterOptions] Response status for ${fieldKey}:`, response.status)
     
     if (!response.ok) {
-      console.error(`Failed to load options for ${fieldKey}: ${response.statusText}`)
+      const errorText = await response.text()
+      console.error(`[loadFilterOptions] Failed to load options for ${fieldKey}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      })
       return []
     }
     
     const data = await response.json()
     
     if (data.error) {
-      console.error(`Error loading options for ${fieldKey}:`, data.error)
+      console.error(`[loadFilterOptions] API error for ${fieldKey}:`, data.error)
       return []
     }
     
-    return data.options || []
+    const options = data.options || []
+    console.log(`[loadFilterOptions] Loaded ${options.length} options for ${fieldKey}`)
+    
+    return options
     
   } catch (error) {
-    console.error(`Error loading options for ${fieldKey}:`, error)
+    console.error(`[loadFilterOptions] Exception loading options for ${fieldKey}:`, error)
     return []
   }
 }
