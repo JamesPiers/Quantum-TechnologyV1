@@ -100,23 +100,29 @@ export const FILTER_FIELDS: Record<string, FilterFieldConfig> = {
   drawing: {
     key: 'drawing',
     label: 'Drawing',
-    type: 'text',
-    placeholder: 'Enter drawing reference...'
+    type: 'select',
+    async: true,
+    searchable: true,
+    placeholder: 'Select or type drawing...'
   },
   
   drawing_id: {
     key: 'drawing_id',
     label: 'Drawing ID',
-    type: 'text',
-    placeholder: 'Enter drawing ID...'
+    type: 'select',
+    async: true,
+    searchable: true,
+    placeholder: 'Select or type drawing ID...'
   },
   
   // Purchase information
   purchase_order: {
     key: 'purchase_order',
     label: 'Purchase Order',
-    type: 'text',
-    placeholder: 'Enter PO number...'
+    type: 'select',
+    async: true,
+    searchable: true,
+    placeholder: 'Select or type PO number...'
   },
   
   responsible_person: {
@@ -353,64 +359,27 @@ export const SORT_FIELDS: Record<string, SortConfig> = {
 
 /**
  * Load dropdown options for async filter fields
+ * Fetches ALL unique values from the database for a given field
  */
 export async function loadFilterOptions(fieldKey: string): Promise<{ value: string; label: string }[]> {
   try {
-    // For now, we'll use the existing search facets API to get the data
-    // In a real implementation, you might have dedicated endpoints for each field type
+    // Use dedicated filter options API endpoint
+    const response = await fetch(`/api/filters/options?field=${fieldKey}`)
     
-    switch (fieldKey) {
-      case 'supplier':
-      case 'manufacturer':
-      case 'responsible_person':
-      case 'project':
-      case 'section': {
-        const response = await fetch('/api/search')
-        if (!response.ok) return []
-        
-        const data = await response.json()
-        
-        // Extract unique values from the parts data
-        const uniqueValues = new Set<string>()
-        
-        if (data.parts) {
-          data.parts.forEach((part: any) => {
-            let value = ''
-            switch (fieldKey) {
-              case 'supplier':
-                value = part.supplier_name
-                break
-              case 'manufacturer':
-                value = part.manufacturer_name
-                break
-              case 'responsible_person':
-                value = part.responsible_person
-                break
-              case 'project':
-                value = part.project
-                break
-              case 'section':
-                value = part.section
-                break
-            }
-            
-            if (value && value.trim()) {
-              uniqueValues.add(value.trim())
-            }
-          })
-        }
-        
-        return Array.from(uniqueValues)
-          .sort()
-          .map(value => ({
-            value: value,
-            label: value
-          }))
-      }
-      
-      default:
-        return []
+    if (!response.ok) {
+      console.error(`Failed to load options for ${fieldKey}: ${response.statusText}`)
+      return []
     }
+    
+    const data = await response.json()
+    
+    if (data.error) {
+      console.error(`Error loading options for ${fieldKey}:`, data.error)
+      return []
+    }
+    
+    return data.options || []
+    
   } catch (error) {
     console.error(`Error loading options for ${fieldKey}:`, error)
     return []
