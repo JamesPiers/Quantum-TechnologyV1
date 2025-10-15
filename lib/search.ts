@@ -21,9 +21,7 @@ export async function searchParts(params: SearchParts & { sort?: string; order?:
     project: params.project,
     category: params.category,
     limit: params.limit,
-    offset: params.offset,
-    sort: params.sort,
-    order: params.order
+    offset: params.offset
   })
   
   if (error) {
