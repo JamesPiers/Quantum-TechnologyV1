@@ -121,8 +121,8 @@ export function ComboBox({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-80" align="start">
-          <div className="p-2">
+        <DropdownMenuContent className="w-80 max-h-[400px] overflow-y-auto" align="start">
+          <div className="p-2 sticky top-0 bg-popover z-10">
             <Input
               placeholder="Search options..."
               value={searchTerm}
@@ -143,33 +143,35 @@ export function ComboBox({
             </>
           )}
           
-          {isLoading ? (
-            <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              Loading options...
-            </div>
-          ) : filteredOptions.length === 0 ? (
-            <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              {options.length === 0 ? 'No options available.' : 'No options found.'}
-            </div>
-          ) : (
-            filteredOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onSelect={() => handleSelect(option.value)}
-                className="cursor-pointer"
-              >
-                <div className="flex items-center w-full">
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <span className="truncate">{option.label}</span>
-                </div>
-              </DropdownMenuItem>
-            ))
-          )}
+          <div className="max-h-[300px] overflow-y-auto">
+            {isLoading ? (
+              <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                Loading options...
+              </div>
+            ) : filteredOptions.length === 0 ? (
+              <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                {options.length === 0 ? 'No options available.' : 'No options found.'}
+              </div>
+            ) : (
+              filteredOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onSelect={() => handleSelect(option.value)}
+                  className="cursor-pointer"
+                >
+                  <div className="flex items-center w-full">
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <span className="truncate">{option.label}</span>
+                  </div>
+                </DropdownMenuItem>
+              ))
+            )}
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
