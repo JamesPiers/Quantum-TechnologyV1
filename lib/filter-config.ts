@@ -354,7 +354,7 @@ export const SORT_FIELDS: Record<string, SortConfig> = {
 /**
  * Load dropdown options for async filter fields
  */
-export async function loadFilterOptions(fieldKey: string): Promise<FilterFieldOption[]> {
+export async function loadFilterOptions(fieldKey: string): Promise<{ value: string; label: string }[]> {
   try {
     // For now, we'll use the existing search facets API to get the data
     // In a real implementation, you might have dedicated endpoints for each field type
@@ -403,7 +403,7 @@ export async function loadFilterOptions(fieldKey: string): Promise<FilterFieldOp
         return Array.from(uniqueValues)
           .sort()
           .map(value => ({
-            value,
+            value: value,
             label: value
           }))
       }
